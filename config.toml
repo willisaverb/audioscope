@@ -22,3 +22,10 @@ colorize = true
 [debug]
 # when buffers are dropped, print "!"
 print_drop = true
+
+[input]
+device = "MacBook Pro Microphone"
+channels = 1
+sample_rate = 44100
+
+

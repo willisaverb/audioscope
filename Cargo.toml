@@ -10,3 +10,6 @@ glium = "0.29.1"
 portaudio = "0.7.0"
 num = "*"
 rustfft = "4.0.0"
+[patch.crates-io]
+num-bigint = { path = "vendor/num-bigint" }
+
