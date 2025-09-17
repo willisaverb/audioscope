@@ -28,7 +28,6 @@ pub struct AudioBuffer {
 }
 
 const SAMPLE_RATE: f64 = 44_100.0;
-const CHANNELS: i32 = 2;
 const INTERLEAVED: bool = true;
 
 pub fn init_audio(config: &Config) -> Result<(PortAudioStream, MultiBuffer), portaudio::Error> {
@@ -43,9 +42,10 @@ pub fn init_audio(config: &Config) -> Result<(PortAudioStream, MultiBuffer), por
     let def_input = pa.default_input_device()?;
     let input_info = pa.device_info(def_input)?;
     println!("Default input device name: {}", input_info.name);
+    let channels = input_info.max_input_channels;
 
     let latency = input_info.default_low_input_latency;
-    let input_params = StreamParameters::<f32>::new(def_input, CHANNELS, INTERLEAVED, latency);
+    let input_params = StreamParameters::<f32>::new(def_input, channels, INTERLEAVED, latency);
 
     pa.is_input_format_supported(input_params, SAMPLE_RATE)?;
     let settings = InputStreamSettings::new(input_params, SAMPLE_RATE, buffer_size as u32);
@@ -90,11 +90,16 @@ pub fn init_audio(config: &Config) -> Result<(PortAudioStream, MultiBuffer), por
         (receiver, move |InputStreamCallbackArgs { buffer: data, .. }| {
             {
                 let (left, right) = time_ring_buffer.split_at_mut(fft_size);
-                for ((x, t0), t1) in data.chunks(CHANNELS as usize)
+                for ((x, t0), t1) in data.chunks(channels as usize)
                     .zip(left[time_index..(time_index + buffer_size)].iter_mut())
                     .zip(right[time_index..(time_index + buffer_size)].iter_mut())
                 {
-                    let mono = Complex::new(gain * (x[0] + x[1]) / 2.0, 0.0);
+                    let mono_val = if channels > 1 {
+                        (x[0] + x[1]) / 2.0
+                    } else {
+                        x[0]
+                    };
+                    let mono = Complex::new(gain * mono_val, 0.0);
                     *t0 = mono;
                     *t1 = mono;
                 }
